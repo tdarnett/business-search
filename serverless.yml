@@ -2,8 +2,8 @@ service: business-search
 frameworkVersion: '>=1.28.0 <2.0.0'
 
 custom:
-  inputBucket: businessfileinput
-  outputBucket: businessfileoutput
+  inputBucket: business-file-input
+  outputBucket: business-file-output
 
 provider:
   name: aws
@@ -41,11 +41,10 @@ functions:
     events:
       - s3:
           bucket: ${self:custom.inputBucket}
-          existing: true
           event: s3:ObjectCreated:*
           rules:
             - suffix: .csv
     environment:
-      GOOGLE_PLACES_API_KEY: ${param:GOOGLE_PLACES_API_KEY}
+      GOOGLE_PLACES_API_KEY: ${file(./secrets.json):GOOGLE_PLACES_API_KEY}
       INPUT_BUCKET: ${self:custom.inputBucket}
       OUTPUT_BUCKET: ${self:custom.outputBucket}
