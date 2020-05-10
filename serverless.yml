@@ -1,0 +1,51 @@
+service: business-search
+frameworkVersion: '>=1.28.0 <2.0.0'
+
+custom:
+  inputBucket: businessfileinput
+  outputBucket: businessfileoutput
+
+provider:
+  name: aws
+  runtime: go1.x
+  stage: dev
+  region: us-west-2
+  iamRoleStatements:
+    - Effect: Allow
+      Action:
+        - s3:*
+      Resource: "arn:aws:s3:::${self:custom.outputBucket}/*"
+    - Effect: Allow
+      Action:
+        - s3:*
+      Resource: "arn:aws:s3:::${self:custom.inputBucket}/*"
+
+
+package:
+  exclude:
+    - ./**
+  include:
+    - ./bin/**
+
+functions:
+  pre-sign:
+    handler: bin/pre-sign
+    events:
+      - http:
+          path: action/pre-signed-url
+          method: post
+    environment:
+      INPUT_BUCKET: ${self:custom.inputBucket}
+  transform-data:
+    handler: bin/transform-data
+    events:
+      - s3:
+          bucket: ${self:custom.inputBucket}
+          existing: true
+          event: s3:ObjectCreated:*
+          rules:
+            - suffix: .csv
+    environment:
+      GOOGLE_PLACES_API_KEY: ${param:GOOGLE_PLACES_API_KEY}
+      INPUT_BUCKET: ${self:custom.inputBucket}
+      OUTPUT_BUCKET: ${self:custom.outputBucket}
