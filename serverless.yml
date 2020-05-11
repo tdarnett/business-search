@@ -67,3 +67,4 @@ functions:
           method: post
     environment:
       FROM_EMAIL: ${file(./secrets.json):FROM_EMAIL}
+      ADMIN_EMAIL: ${file(./secrets.json):ADMIN_EMAIL}
