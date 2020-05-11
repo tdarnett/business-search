@@ -17,6 +17,7 @@ import (
 	"io"
 	"io/ioutil"
 	"os"
+	"strconv"
 )
 
 const (
@@ -55,23 +56,28 @@ func webhookHandler(ctx context.Context, request events.APIGatewayProxyRequest) 
 		csvData, err := downloadCSV("cleanedInput.csv")
 
 		if err != nil {
-			return acknowledgment(fmt.Sprintf("Error constructing email! %v\\n", err))
+			return acknowledgment(fmt.Sprintf("Error constructing email! %v\n", err))
 		}
 
-		err = sendEmail(recipientEmail, csvData, fileName)
+		err = sendSuccessEmail(recipientEmail, csvData, fileName)
+		if err != nil {
+			return acknowledgment(fmt.Sprintf("Error sending email: %v\n", err))
+		}
 
-	case "payment_intent.failed":
+	case "payment_intent.payment_failed":
 		var paymentIntent stripe.PaymentIntent
 		err := json.Unmarshal(event.Data.Raw, &paymentIntent)
 		if err != nil {
-			return acknowledgment(fmt.Sprintf("Error parsing webhook JSON: %v\\n", err))
+			return acknowledgment(fmt.Sprintf("Error parsing webhook JSON: %v\n", err))
 		}
 
-		// send failure warning email TODO send failure email to original sender
-		//err = sendEmail(os.Getenv("FROM_EMAIL"), csvData, "finished.csv")
+		err = sendFailureEmail(&paymentIntent)
+		if err != nil {
+			return acknowledgment(fmt.Sprintf("Error sending email: %v\n", err))
+		}
 
 	default:
-		return acknowledgment(fmt.Sprintf("Unexpected event type: %s\\n", event.Type))
+		return acknowledgment(fmt.Sprintf("Unexpected event type: %s\n", event.Type))
 	}
 
 	return acknowledgment("success!")
@@ -91,22 +97,49 @@ func acknowledgment(body string) (events.APIGatewayProxyResponse, error) {
 	return result, nil
 }
 
-func sendEmail(emailAddress string, data []byte, filename string) error {
-
+func constructEmail(emailAddress string, subject string, body string) *gomail.Message {
 	// construct email using gomail's helpful WriteTo function for SES requirements
 	msg := gomail.NewMessage()
 	msg.SetHeader("From", os.Getenv("FROM_EMAIL")) // This address must be verified with Amazon SES.
 	msg.SetHeader("To", emailAddress)
-	msg.SetHeader("Subject", Subject)
-	msg.SetBody("text/html", HtmlBody)
+	msg.SetHeader("Subject", subject)
+	msg.SetBody("text/html", body)
 
+	return msg
+}
+
+func sendSuccessEmail(emailAddress string, data []byte, filename string) error {
+	msg := constructEmail(emailAddress, Subject, HtmlBody)
+
+	// attach the csv
 	msg.Attach(filename, gomail.SetCopyFunc(func(w io.Writer) error {
 		_, err := w.Write(data)
 		return err
 	}))
 
+	// send a copy to admin as well
+	msg.SetHeader("Bcc", os.Getenv("ADMIN_EMAIL"))
+
+	err := sendEmail(msg)
+
+	return err
+}
+
+func sendFailureEmail(intent *stripe.PaymentIntent) error {
+	price := strconv.FormatInt(intent.Amount/int64(100), 10)
+	subject := fmt.Sprintf("Payment for $%s %s has failed!", price, intent.Currency)
+	body := fmt.Sprintf("Payment attempt of $%s %s from <%s> has failed. Status: %s", price, intent.Currency, intent.ReceiptEmail, intent.Status)
+
+	msg := constructEmail(os.Getenv("ADMIN_EMAIL"), subject, body) // send error emails to sender email
+	err := sendEmail(msg)
+
+	return err
+}
+
+func sendEmail(email *gomail.Message) error {
+
 	var emailRaw bytes.Buffer
-	_, err := msg.WriteTo(&emailRaw)
+	_, err := email.WriteTo(&emailRaw)
 	if err != nil {
 		return err
 	}
