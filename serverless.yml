@@ -19,6 +19,13 @@ provider:
       Action:
         - s3:*
       Resource: "arn:aws:s3:::${self:custom.inputBucket}/*"
+    - Effect: Allow
+      Action:
+        - ses:*
+      Resource: "*"
+  environment:
+    INPUT_BUCKET: ${self:custom.inputBucket}
+    OUTPUT_BUCKET: ${self:custom.outputBucket}
 
 
 package:
@@ -34,8 +41,6 @@ functions:
       - http:
           path: action/pre-signed-url
           method: post
-    environment:
-      INPUT_BUCKET: ${self:custom.inputBucket}
   transform-data:
     handler: bin/transform-data
     events:
@@ -46,5 +51,20 @@ functions:
             - suffix: .csv
     environment:
       GOOGLE_PLACES_API_KEY: ${file(./secrets.json):GOOGLE_PLACES_API_KEY}
-      INPUT_BUCKET: ${self:custom.inputBucket}
-      OUTPUT_BUCKET: ${self:custom.outputBucket}
+  generate-payment-intent:
+    handler: bin/generate-payment-intent
+    events:
+      - http:
+          path: file-status
+          method: get
+    environment:
+      STRIPE_API_KEY: ${file(./secrets.json):STRIPE_API_KEY}
+  webhook-handler:
+    handler: bin/webhook-handler
+    events:
+      - http:
+          path: events
+          method: post
+    environment:
+      FROM_EMAIL: ${file(./secrets.json):FROM_EMAIL}
+      ADMIN_EMAIL: ${file(./secrets.json):ADMIN_EMAIL}
