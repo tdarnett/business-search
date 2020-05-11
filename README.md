@@ -1,8 +1,7 @@
 # Business Search
 
-This is the backend component of the business search tool. It is comprised of two go lambda functions: pre-sign and transform-data. 
-Together, they will allow a client to upload a CSV to s3 and receive a CSV with additional business data on each row... very complex.
-
+This is the backend component of the business search tool, comprised of a collection of lambda functions written in Go. 
+Together, they will allow a client to upload a CSV to s3, collect payment from the client, and receive a CSV with additional business data on each row via email... very complex.
 
 1. `pre-sign` will take in a filename and generate a presigned PUT URL that gives the client permissions to write to an otherwise private s3 bucket.
 
@@ -15,4 +14,4 @@ if the csv conversion was successful. This will allow us to charge the charge th
 4. `webhook-handler` is triggered by webhooks from Stripe whenever a payment intent was successful or failed. 
 Upon a success, we will email the CSV to the customer. If any failure occurs, we will email an admin with the purchase information.
 
-The intention of this project is to help automate business development tasks for a friends company.
+The intention of this project is to help automate business development tasks for a friends company while experimenting with new software tools.
