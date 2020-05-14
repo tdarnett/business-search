@@ -22,7 +22,7 @@ func HandleRequest(ctx context.Context, request events.APIGatewayProxyRequest) (
 	// Initialize a session in us-west-2 that the SDK will use to load
 	// credentials from the shared credentials file ~/.aws/credentials.
 	sess := session.Must(session.NewSession())
-
+	log.Printf(request.Body)
 	key, err := parseResponseStringToTypedObject(request.Body)
 	log.Println(key)
 
@@ -43,7 +43,11 @@ func HandleRequest(ctx context.Context, request events.APIGatewayProxyRequest) (
 		return events.APIGatewayProxyResponse{}, err
 	}
 
-	return events.APIGatewayProxyResponse{Body: url, StatusCode: 200}, err
+	headers := make(map[string]string)
+	headers["Access-Control-Allow-Origin"] = "*"
+	headers["Access-Control-Allow-Credentials"] = "true"
+
+	return events.APIGatewayProxyResponse{Body: url, StatusCode: 200, Headers:headers}, err
 }
 
 func main() {

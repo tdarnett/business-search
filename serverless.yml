@@ -8,7 +8,7 @@ custom:
 provider:
   name: aws
   runtime: go1.x
-  stage: dev
+  stage: prod
   region: us-west-2
   iamRoleStatements:
     - Effect: Allow
@@ -41,6 +41,7 @@ functions:
       - http:
           path: action/pre-signed-url
           method: post
+          cors: true
   transform-data:
     handler: bin/transform-data
     events:
