@@ -121,7 +121,10 @@ func attemptPaymentIntent(ctx context.Context, request events.APIGatewayProxyReq
 
 	}
 
-	return events.APIGatewayProxyResponse{Body: string(jsonResponse), StatusCode: 200}, err
+	headers := make(map[string]string)
+	headers["Access-Control-Allow-Origin"] = "*"
+	headers["Access-Control-Allow-Credentials"] = "true"
+	return events.APIGatewayProxyResponse{Body: string(jsonResponse), StatusCode: 200, Headers: headers}, err
 
 }
 

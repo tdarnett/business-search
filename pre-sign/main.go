@@ -36,6 +36,7 @@ func HandleRequest(ctx context.Context, request events.APIGatewayProxyRequest) (
 	req, _ := svc.PutObjectRequest(&s3.PutObjectInput{
 		Bucket: aws.String(os.Getenv("INPUT_BUCKET")),
 		Key: aws.String(key),
+		ContentType: aws.String("multipart/form-data"),
 	})
 	url, err := req.Presign(2 * time.Minute)
 
@@ -47,7 +48,7 @@ func HandleRequest(ctx context.Context, request events.APIGatewayProxyRequest) (
 	headers["Access-Control-Allow-Origin"] = "*"
 	headers["Access-Control-Allow-Credentials"] = "true"
 
-	return events.APIGatewayProxyResponse{Body: url, StatusCode: 200, Headers:headers}, err
+	return events.APIGatewayProxyResponse{Body: url, StatusCode: 200, Headers: headers}, err
 }
 
 func main() {

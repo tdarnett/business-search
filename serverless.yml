@@ -58,6 +58,7 @@ functions:
       - http:
           path: file-status
           method: get
+          cors: true
     environment:
       STRIPE_API_KEY: ${file(./secrets.json):STRIPE_API_KEY}
   webhook-handler:
