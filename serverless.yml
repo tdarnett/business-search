@@ -10,6 +10,8 @@ provider:
   runtime: go1.x
   stage: prod
   region: us-west-2
+  httpApi:
+    cors: true
   iamRoleStatements:
     - Effect: Allow
       Action:
@@ -17,7 +19,8 @@ provider:
       Resource: "arn:aws:s3:::${self:custom.outputBucket}/*"
     - Effect: Allow
       Action:
-        - s3:*
+        - "s3:PutObject"
+        - "s3:GetObject"
       Resource: "arn:aws:s3:::${self:custom.inputBucket}/*"
     - Effect: Allow
       Action:
@@ -38,10 +41,9 @@ functions:
   pre-sign:
     handler: bin/pre-sign
     events:
-      - http:
-          path: action/pre-signed-url
-          method: post
-          cors: true
+      - httpApi:
+          path: /post/pre-signed-url
+          method: POST
   transform-data:
     handler: bin/transform-data
     events:
@@ -55,18 +57,17 @@ functions:
   generate-payment-intent:
     handler: bin/generate-payment-intent
     events:
-      - http:
-          path: file-status
-          method: get
-          cors: true
+      - httpApi:
+          path: /get/file-status
+          method: GET
     environment:
       STRIPE_API_KEY: ${file(./secrets.json):STRIPE_API_KEY}
   webhook-handler:
     handler: bin/webhook-handler
     events:
-      - http:
-          path: events
-          method: post
+      - httpApi:
+          path: /post/events
+          method: POST
     environment:
       FROM_EMAIL: ${file(./secrets.json):FROM_EMAIL}
       ADMIN_EMAIL: ${file(./secrets.json):ADMIN_EMAIL}

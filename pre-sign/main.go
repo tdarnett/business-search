@@ -18,6 +18,11 @@ type FileMetaData struct {
 	Filename string `json:"file_name"`
 }
 
+type Body struct {
+	Url string `json:"url"`
+	Key string `json:"key"`
+}
+
 func HandleRequest(ctx context.Context, request events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
 	// Initialize a session in us-west-2 that the SDK will use to load
 	// credentials from the shared credentials file ~/.aws/credentials.
@@ -35,8 +40,7 @@ func HandleRequest(ctx context.Context, request events.APIGatewayProxyRequest) (
 
 	req, _ := svc.PutObjectRequest(&s3.PutObjectInput{
 		Bucket: aws.String(os.Getenv("INPUT_BUCKET")),
-		Key: aws.String(key),
-		ContentType: aws.String("multipart/form-data"),
+		Key:    aws.String(key),
 	})
 	url, err := req.Presign(2 * time.Minute)
 
@@ -44,11 +48,21 @@ func HandleRequest(ctx context.Context, request events.APIGatewayProxyRequest) (
 		return events.APIGatewayProxyResponse{}, err
 	}
 
-	headers := make(map[string]string)
-	headers["Access-Control-Allow-Origin"] = "*"
-	headers["Access-Control-Allow-Credentials"] = "true"
+	// construct response body
+	responseBody := &Body{
+		Key: key,
+		Url: url,
+	}
 
-	return events.APIGatewayProxyResponse{Body: url, StatusCode: 200, Headers: headers}, err
+	var jsonResponse []byte
+	jsonResponse, err = json.Marshal(responseBody)
+
+	if err != nil {
+		return events.APIGatewayProxyResponse{}, err
+
+	}
+
+	return events.APIGatewayProxyResponse{Body: string(jsonResponse), StatusCode: 200}, err
 }
 
 func main() {
