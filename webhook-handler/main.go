@@ -22,10 +22,10 @@ import (
 
 const (
 	// The subject line for the email.
-	Subject = "Your completed file from BusinessSearch!"
+	Subject = "Your completed file from Business Search!"
 
 	// The HTML body for the email.
-	HtmlBody = "<h1>Thank you for using BusinessSearch!</h1>" +
+	HtmlBody = "<h1>Thank you for using Business Search!</h1>" +
 		"<p>Your file is attached and a receipt has been sent.</p>"
 )
 
@@ -48,18 +48,17 @@ func webhookHandler(ctx context.Context, request events.APIGatewayProxyRequest) 
 			return acknowledgment(fmt.Sprintf("Error parsing webhook JSON: %v\\n", err))
 		}
 
-		paymentIntent.Metadata["filename"] = "cleanedInput.csv" // TODO remove after tesing
 
 		recipientEmail := paymentIntent.ReceiptEmail
-		fileName := paymentIntent.Metadata["filename"]
+		filename := paymentIntent.Metadata["filename"]
 
-		csvData, err := downloadCSV("cleanedInput.csv")
+		csvData, err := downloadCSV(filename)
 
 		if err != nil {
 			return acknowledgment(fmt.Sprintf("Error constructing email! %v\n", err))
 		}
 
-		err = sendSuccessEmail(recipientEmail, csvData, fileName)
+		err = sendSuccessEmail(recipientEmail, csvData, filename)
 		if err != nil {
 			return acknowledgment(fmt.Sprintf("Error sending email: %v\n", err))
 		}
@@ -193,8 +192,6 @@ func sendEmail(email *gomail.Message) error {
 func downloadCSV(filename string) ([]byte, error) {
 	sess := session.Must(session.NewSession())
 
-	key := "output-" + filename
-
 	// Create S3 service client
 	svc := s3.New(sess)
 
@@ -202,7 +199,7 @@ func downloadCSV(filename string) ([]byte, error) {
 
 	params := &s3.SelectObjectContentInput{
 		Bucket:         aws.String(os.Getenv("OUTPUT_BUCKET")),
-		Key:            aws.String(key),
+		Key:            aws.String(filename),
 		ExpressionType: aws.String(s3.ExpressionTypeSql),
 		Expression:     aws.String(sqlQuery),
 		InputSerialization: &s3.InputSerialization{
