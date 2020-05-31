@@ -134,7 +134,6 @@ func populateBusiness(business *Business, wg *sync.WaitGroup, s maps.PlaceAutoco
 }
 
 func uploadData(businesses *[]Business, sess *session.Session, key string) string {
-	fmt.Println("about to upload")
 
 	destBucketName := os.Getenv("OUTPUT_BUCKET")
 	destKey := "output-" + key
